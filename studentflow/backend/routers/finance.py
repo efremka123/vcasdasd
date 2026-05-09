@@ -168,6 +168,20 @@ def get_p5_basket_prices():
     return get_p5_prices_sync()
 
 
+@router.post("/prices/p5/basket/refresh")
+async def refresh_p5_basket_prices():
+    """Обновить кэш цен Пятёрочки (асинхронно)"""
+    from services.p5_prices import P5PriceService
+    
+    service = P5PriceService(store_sap_code="12345")
+    data = await service.get_student_basket_total()
+    
+    return {
+        "message": "Кэш цен обновлён",
+        **data
+    }
+
+
 @router.post("/settings/exam-mode")
 def set_exam_mode(enabled: bool = Query(...)):
     """Включить/выключить режим сессии"""
