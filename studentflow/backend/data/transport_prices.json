@@ -1,0 +1,23 @@
+{
+  "meta": {
+    "source": "transport.mos.ru",
+    "last_updated": "2026-01-01",
+    "next_check": "2026-04-01"
+  },
+  "troika": {
+    "wallet": 42,
+    "90_minutes": 65,
+    "transfer_metro_bus": 65
+  },
+  "unified": {
+    "1_day": 415,
+    "3_days": 1245,
+    "30_days": 3460,
+    "90_days": 9850
+  },
+  "student_benefits": {
+    "metro_monthly": 545,
+    "bus_monthly": 345,
+    "combined_monthly": 890
+  }
+}
