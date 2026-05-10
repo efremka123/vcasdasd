@@ -1,11 +1,17 @@
+"""
+Database module for StudentFlow - handles SQLite connections and schema initialization.
+"""
 import sqlite3
 from pathlib import Path
+from typing import Optional
 
 
+# Database configuration
 DB_PATH = Path(__file__).parent.parent / "data" / "studentflow.db"
 
-INIT_SQL = """
--- transactions: основные записи
+# Database schema definition
+SCHEMA = """
+-- transactions: Core transaction records
 CREATE TABLE IF NOT EXISTS transactions (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     date TEXT NOT NULL,
@@ -17,13 +23,13 @@ CREATE TABLE IF NOT EXISTS transactions (
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
--- user_settings: настройки пользователя
+-- user_settings: User preferences and settings
 CREATE TABLE IF NOT EXISTS user_settings (
     key TEXT PRIMARY KEY,
     value TEXT
 );
 
--- price_cache: кэш внешних данных
+-- price_cache: Cache for external price data
 CREATE TABLE IF NOT EXISTS price_cache (
     source TEXT NOT NULL,
     cache_key TEXT NOT NULL,
@@ -33,28 +39,58 @@ CREATE TABLE IF NOT EXISTS price_cache (
     PRIMARY KEY (source, cache_key)
 );
 
--- Индексы для ускорения выборок
+-- Indexes for query optimization
 CREATE INDEX IF NOT EXISTS idx_transactions_date ON transactions(date);
 CREATE INDEX IF NOT EXISTS idx_transactions_category ON transactions(category);
 CREATE INDEX IF NOT EXISTS idx_price_cache_expires ON price_cache(expires_at);
 """
 
 
-def get_db_connection():
-    """Возвращает соединение с БД"""
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    return conn
+class DatabaseManager:
+    """Manages database connections and operations."""
+    
+    def __init__(self, db_path: Optional[Path] = None):
+        """Initialize database manager with optional custom path."""
+        self.db_path = db_path or DB_PATH
+    
+    def get_connection(self) -> sqlite3.Connection:
+        """Get a database connection with row factory enabled."""
+        conn = sqlite3.connect(self.db_path)
+        conn.row_factory = sqlite3.Row
+        return conn
+    
+    def initialize(self) -> None:
+        """Initialize database schema, creating tables if they don't exist."""
+        self.db_path.parent.mkdir(parents=True, exist_ok=True)
+        conn = self.get_connection()
+        try:
+            conn.executescript(SCHEMA)
+            conn.commit()
+        finally:
+            conn.close()
+        print(f"✅ Database initialized: {self.db_path}")
 
 
-def init_db():
-    """Инициализирует БД, создаёт таблицы"""
-    DB_PATH.parent.mkdir(parents=True, exist_ok=True)
-    conn = get_db_connection()
-    conn.executescript(INIT_SQL)
-    conn.commit()
-    conn.close()
-    print(f"✅ База данных инициализирована: {DB_PATH}")
+# Module-level convenience functions
+_db_manager: Optional[DatabaseManager] = None
+
+
+def get_db_manager() -> DatabaseManager:
+    """Get or create the global database manager instance."""
+    global _db_manager
+    if _db_manager is None:
+        _db_manager = DatabaseManager()
+    return _db_manager
+
+
+def get_db_connection() -> sqlite3.Connection:
+    """Get a database connection (convenience function)."""
+    return get_db_manager().get_connection()
+
+
+def init_db() -> None:
+    """Initialize the database (convenience function)."""
+    get_db_manager().initialize()
 
 
 if __name__ == "__main__":

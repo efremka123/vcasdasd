@@ -1,61 +1,66 @@
-import sys
-from pathlib import Path
-
-# Добавляем родительскую директорию в путь для импортов
-sys.path.insert(0, str(Path(__file__).parent.parent))
-
+"""
+StudentFlow API - Smart personal finance tracker for students.
+"""
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 
-from models.database import init_db
-from routers.transactions import router as transactions_router
-from routers.finance import router as finance_router
+from backend.models.database import init_db
+from backend.routers.transactions import router as transactions_router
+from backend.routers.finance import router as finance_router
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Инициализация при запуске приложения"""
-    # Инициализируем БД
+    """Application lifespan manager - handles startup and shutdown events."""
+    # Initialize database on startup
     init_db()
     yield
-    # Очистка при завершении (если нужно)
+    # Cleanup on shutdown (if needed)
 
 
-app = FastAPI(
-    title="StudentFlow",
-    description="Умный трекер личных финансов для студента",
-    version="0.1.0"
-)
+def create_app() -> FastAPI:
+    """Application factory for creating FastAPI instance."""
+    app = FastAPI(
+        title="StudentFlow",
+        description="Smart personal finance tracker for students",
+        version="0.1.0",
+        lifespan=lifespan
+    )
 
-# CORS для фронтенда
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],  # В продакшене указать конкретные домены
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+    # Configure CORS middleware
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],  # TODO: Specify concrete domains in production
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
 
-# Подключаем роутеры
-app.include_router(transactions_router)
-app.include_router(finance_router)
+    # Include routers
+    app.include_router(transactions_router)
+    app.include_router(finance_router)
+
+    # Register routes
+    @app.get("/")
+    def root():
+        """Root endpoint."""
+        return {
+            "message": "Welcome to StudentFlow API 🎓",
+            "docs": "/docs",
+            "version": "0.1.0"
+        }
+
+    @app.get("/health")
+    def health_check():
+        """Health check endpoint."""
+        return {"status": "ok"}
+
+    return app
 
 
-@app.get("/")
-def root():
-    """Корневой эндпоинт"""
-    return {
-        "message": "Welcome to StudentFlow API 🎓",
-        "docs": "/docs",
-        "version": "0.1.0"
-    }
-
-
-@app.get("/health")
-def health_check():
-    """Проверка здоровья сервиса"""
-    return {"status": "ok"}
+# Create application instance
+app = create_app()
 
 
 if __name__ == "__main__":
